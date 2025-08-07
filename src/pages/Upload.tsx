@@ -1,89 +1,52 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Navigation from "@/components/ui/navigation";
 import UploadZone from "@/components/ui/upload-zone";
-import ApiKeySetup from "@/components/ui/api-key-setup";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Sparkles, ArrowLeft, ExternalLink } from "lucide-react";
+import { Loader2, Sparkles, ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
-import { StyleMatchService } from "@/integrations/supabase/styleMatchService";
-import { AnalyzeOutfitResponse, OutfitRecommendation } from "@/types/clothing";
 
 const Upload = () => {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [analysisResult, setAnalysisResult] = useState<AnalyzeOutfitResponse | null>(null);
-  const [apiKey, setApiKey] = useState<string | null>(null);
-
-  // Check for stored API key on component mount
-  useEffect(() => {
-    const storedApiKey = localStorage.getItem('openai_api_key');
-    if (storedApiKey) {
-      setApiKey(storedApiKey);
-    }
-  }, []);
-
-  const handleApiKeySet = (key: string) => {
-    localStorage.setItem('openai_api_key', key);
-    setApiKey(key);
-    toast.success("API key saved! You can now analyze outfits.");
-  };
+  const [analysisComplete, setAnalysisComplete] = useState(false);
 
   const handleImageUpload = (file: File) => {
     setUploadedFile(file);
-    setAnalysisResult(null);
+    setAnalysisComplete(false);
   };
 
   const analyzePhoto = async () => {
-    if (!uploadedFile || !apiKey) return;
+    if (!uploadedFile) return;
     
     setIsAnalyzing(true);
     
-    try {
-      // Set the API key in localStorage for the Edge Function to use
-      localStorage.setItem('openai_api_key', apiKey);
-      
-      const result = await StyleMatchService.analyzeOutfit(uploadedFile, apiKey);
-      setAnalysisResult(result);
-      toast.success("Analysis complete! Here are your AI-powered style recommendations.");
-    } catch (error) {
-      console.error('Analysis error:', error);
-      toast.error("Analysis failed. Please try again or check your API key.");
-    } finally {
-      setIsAnalyzing(false);
-    }
+    // Simulate AI analysis
+    await new Promise(resolve => setTimeout(resolve, 3000));
+    
+    setIsAnalyzing(false);
+    setAnalysisComplete(true);
+    toast.success("Analysis complete! Here are your style recommendations.");
   };
 
-  // Show API key setup if not configured
-  if (!apiKey) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Navigation />
-        <div className="pt-24 pb-16">
-          <div className="container mx-auto px-4">
-            <div className="text-center mb-12">
-              <Button variant="ghost" asChild className="mb-6">
-                <Link to="/" className="flex items-center gap-2">
-                  <ArrowLeft className="w-4 h-4" />
-                  Back to Home
-                </Link>
-              </Button>
-              
-              <h1 className="text-4xl md:text-5xl font-bold mb-6 gradient-text">
-                AI-Powered Style Analysis
-              </h1>
-              <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-                Connect your OpenAI API to unlock sophisticated outfit recommendations
-              </p>
-            </div>
-            
-            <ApiKeySetup onApiKeySet={handleApiKeySet} />
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const mockRecommendations = [
+    {
+      category: "Tops",
+      items: ["Silk Blouse in Emerald", "Cashmere Sweater in Cream", "Cotton Shirt in Navy"]
+    },
+    {
+      category: "Bottoms", 
+      items: ["High-waisted Trousers in Charcoal", "Midi Skirt in Camel", "Dark Wash Jeans"]
+    },
+    {
+      category: "Outerwear",
+      items: ["Wool Coat in Camel", "Leather Jacket in Black", "Blazer in Navy"]
+    },
+    {
+      category: "Accessories",
+      items: ["Gold Statement Necklace", "Leather Handbag in Tan", "Silk Scarf in Floral"]
+    }
+  ];
 
   return (
     <div className="min-h-screen bg-background">
@@ -113,7 +76,7 @@ const Upload = () => {
             <UploadZone onImageUpload={handleImageUpload} />
             
             {/* Analysis Button */}
-            {uploadedFile && !analysisResult && (
+            {uploadedFile && !analysisComplete && (
               <div className="text-center mt-8">
                 <Button
                   onClick={analyzePhoto}
@@ -151,85 +114,50 @@ const Upload = () => {
             )}
             
             {/* Results Section */}
-            {analysisResult && analysisResult.success && (
+            {analysisComplete && (
               <div className="mt-12">
                 <div className="text-center mb-8">
                   <h2 className="text-3xl font-bold mb-4 gradient-text">
-                    AI Analysis Results
+                    Your Style Recommendations
                   </h2>
-                  <div className="max-w-md mx-auto p-4 rounded-lg bg-gradient-to-r from-primary/10 to-accent/10 border border-primary/20 mb-6">
-                    <h3 className="font-semibold text-lg mb-2">Detected Item</h3>
-                    <p className="text-muted-foreground">
-                      <strong>Category:</strong> {analysisResult.analysis.category} | 
-                      <strong> Gender:</strong> {analysisResult.analysis.gender}
-                    </p>
-                  </div>
                   <p className="text-muted-foreground">
-                    Based on advanced AI analysis of your photo, here are personalized recommendations
+                    Based on your photo analysis, here are our curated suggestions
                   </p>
                 </div>
                 
-                <div className="space-y-8">
-                  {analysisResult.recommendations.map((recommendation: OutfitRecommendation, index: number) => (
-                    <Card key={index} className="hover-lift border-primary/20">
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2 text-lg">
+                <div className="grid md:grid-cols-2 gap-8">
+                  {mockRecommendations.map((category, index) => (
+                    <div key={index} className="hover-lift">
+                      <div className="p-6 rounded-xl bg-gradient-to-br from-card via-secondary/50 to-card border border-border/50">
+                        <h3 className="text-xl font-semibold mb-4 text-foreground flex items-center gap-2">
                           <div className="w-3 h-3 rounded-full bg-gradient-to-r from-primary to-accent" />
-                          Matches for: {recommendation.recommendedItem}
-                        </CardTitle>
-                        <CardDescription>
-                          AI-curated items that complement this style
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                          {recommendation.matches.map((item, itemIndex) => (
-                            <div key={itemIndex} className="p-4 rounded-lg bg-gradient-to-br from-secondary/50 to-muted/30 border border-border/50 hover-lift">
-                              <h4 className="font-semibold text-foreground mb-2">{item.name}</h4>
-                              <div className="text-sm text-muted-foreground space-y-1">
-                                <p><strong>Style:</strong> {item.style}</p>
-                                <p><strong>Color:</strong> {item.color}</p>
-                                <p><strong>Category:</strong> {item.category}</p>
-                              </div>
-                              <p className="text-sm text-muted-foreground mt-2">{item.description}</p>
-                            </div>
+                          {category.category}
+                        </h3>
+                        <ul className="space-y-3">
+                          {category.items.map((item, itemIndex) => (
+                            <li key={itemIndex} className="text-muted-foreground flex items-center gap-3">
+                              <Sparkles className="w-4 h-4 text-accent" />
+                              {item}
+                            </li>
                           ))}
-                        </div>
-                      </CardContent>
-                    </Card>
+                        </ul>
+                      </div>
+                    </div>
                   ))}
                 </div>
                 
-                <div className="text-center mt-8 space-y-4">
-                  <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                    <Button
-                      onClick={() => {
-                        setUploadedFile(null);
-                        setAnalysisResult(null);
-                      }}
-                      variant="outline"
-                      size="lg"
-                      className="hover-lift"
-                    >
-                      Try Another Photo
-                    </Button>
-                    
-                    <Button
-                      asChild
-                      size="lg"
-                      className="bg-gradient-to-r from-primary to-accent hover-lift"
-                    >
-                      <a 
-                        href="https://platform.openai.com" 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2"
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                        Powered by OpenAI
-                      </a>
-                    </Button>
-                  </div>
+                <div className="text-center mt-8">
+                  <Button
+                    onClick={() => {
+                      setUploadedFile(null);
+                      setAnalysisComplete(false);
+                    }}
+                    variant="outline"
+                    size="lg"
+                    className="hover-lift"
+                  >
+                    Try Another Photo
+                  </Button>
                 </div>
               </div>
             )}
