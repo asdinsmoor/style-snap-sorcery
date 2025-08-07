@@ -5,11 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Loader2, Sparkles, ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
+import { OpenAIService, StyleRecommendations } from "@/services/openai";
 
 const Upload = () => {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisComplete, setAnalysisComplete] = useState(false);
+  const [recommendations, setRecommendations] = useState<StyleRecommendations[]>([]);
 
   const handleImageUpload = (file: File) => {
     setUploadedFile(file);
@@ -19,17 +21,36 @@ const Upload = () => {
   const analyzePhoto = async () => {
     if (!uploadedFile) return;
     
+    // Validate file
+    if (!OpenAIService.isValidImageFile(uploadedFile)) {
+      toast.error("Please upload a valid image file (JPEG, PNG, or WebP)");
+      return;
+    }
+    
+    if (!OpenAIService.isValidFileSize(uploadedFile)) {
+      toast.error("File size must be under 5MB");
+      return;
+    }
+    
     setIsAnalyzing(true);
     
-    // Simulate AI analysis
-    await new Promise(resolve => setTimeout(resolve, 3000));
-    
-    setIsAnalyzing(false);
-    setAnalysisComplete(true);
-    toast.success("Analysis complete! Here are your style recommendations.");
+    try {
+      const styleRecommendations = await OpenAIService.analyzeClothingImage(uploadedFile);
+      setRecommendations(styleRecommendations);
+      setAnalysisComplete(true);
+      toast.success("Analysis complete! Here are your AI-powered style recommendations.");
+    } catch (error) {
+      console.error("Analysis error:", error);
+      toast.error("Failed to analyze image. Please try again.");
+      // Use fallback recommendations on error
+      setRecommendations(getMockRecommendations());
+      setAnalysisComplete(true);
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
-  const mockRecommendations = [
+  const getMockRecommendations = (): StyleRecommendations[] => [
     {
       category: "Tops",
       items: ["Silk Blouse in Emerald", "Cashmere Sweater in Cream", "Cotton Shirt in Navy"]
@@ -126,7 +147,7 @@ const Upload = () => {
                 </div>
                 
                 <div className="grid md:grid-cols-2 gap-8">
-                  {mockRecommendations.map((category, index) => (
+                  {recommendations.map((category, index) => (
                     <div key={index} className="hover-lift">
                       <div className="p-6 rounded-xl bg-gradient-to-br from-card via-secondary/50 to-card border border-border/50">
                         <h3 className="text-xl font-semibold mb-4 text-foreground flex items-center gap-2">
@@ -151,6 +172,7 @@ const Upload = () => {
                     onClick={() => {
                       setUploadedFile(null);
                       setAnalysisComplete(false);
+                      setRecommendations([]);
                     }}
                     variant="outline"
                     size="lg"
